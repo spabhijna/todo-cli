@@ -59,6 +59,8 @@ impl Todo {
         };
         INSTANCE_COUNT.fetch_add(1, Ordering::SeqCst);
         return todo;
+        
+         
     }
     pub fn display(&self) {
         println!("Todo ID: {}", self.id);

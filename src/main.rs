@@ -1,27 +1,29 @@
 mod todo;
 mod utils;
+mod commands;
+
+
 
 use std::path::Path;
 
-use std::fs::{File,read_to_string};
+use std::fs::{read_to_string};
 
 use std::io::{self, 
         Write};
 
-use utils::{get_title, 
-    get_description, 
-    get_due_date, 
-    get_priority, 
-    get_status};
 
-use todo::{Todo, 
-        Status};
 
 use clap::{Parser, 
         Subcommand};
+use crate::commands::{add, change_description, change_duedate, change_priority, change_status, delete, display, exit, help, save};
 
 #[derive(Parser)]
-#[command(name = "Todo-app")]
+#[command(name = "todo-cli",
+    about = "A simple command-line todo list application",
+    long_about = "Todo-cli is a lightweight tool for managing your tasks from the terminal. \
+                  Use it to run the application and manage your todos efficiently.",
+    version = "0.1.0",
+    author = "Abhijna S P <abhijnasp1@gmail.com>")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -30,6 +32,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[command(
+        about = "Run the todo application",
+        long_about = "Starts the todo application, allowing you to interact with your task list."
+    )]
     Run,
 }
 fn main() {
@@ -45,7 +51,7 @@ fn main() {
 }
 
 fn run() {
-    let path = Path::new("files/todo.json");
+    let path = Path::new("../files/todo.json");
     let mut list: Vec<todo::Todo>;
     if path.exists() {
         let data = read_to_string(path).unwrap();
@@ -70,146 +76,35 @@ fn run() {
 
         match input {
             "add" => {
-                let title = get_title();
-                let description = get_description();
-                let due_date = get_due_date();
-                let priority = get_priority();
-                let status = get_status();
-
-                let todo = Todo::new(
-                    title,
-                    description,
-                    due_date,
-                    priority,
-                    status,
-                );
-                list.push(todo);
+                add(&mut list);
             }
             "display" => {
-                if list.is_empty() {
-                    println!("No tasks at the moment.");
-                   
-                }else {
-                    for todo in &list {
-                        todo.display();
-                        println!("---------------------------------");
-                    }
-                }
-                
+                display(&mut list);
             }
             "change-priority" => {
-                println!("Enter the Task ID to update priority:");
-                let mut id_input = String::new();
-                io::stdin()
-                    .read_line(&mut id_input)
-                    .expect("Failed to read line");
-                if let Ok(id) = id_input.trim().parse::<i32>() {
-                    if let Some(todo) = list.iter_mut().find(|t| t.id == id) {
-                        let new_priority = get_priority();
-                        todo.set_priority(new_priority);
-                        println!("Priority updated.");
-                    } else {
-                        println!("Todo with ID {} not found.", id);
-                    }
-                } else {
-                    println!("Invalid ID.");
-                }
+                change_priority(& mut list);
             }
             "change-status" => {
-                println!("Enter the Task ID to update status:");
-                let mut id_input = String::new();
-                io::stdin()
-                    .read_line(&mut id_input)
-                    .expect("Failed to read line");
-                if let Ok(id) = id_input.trim().parse::<i32>() {
-                    if let Some(todo) = list.iter_mut().find(|t| t.id == id) {
-                        let new_status = get_status();
-                        match new_status {
-                            Status::Completed => todo.mark_completed(),
-                            Status::Incompleted => todo.mark_incompleted(),
-                            Status::Inprogress => todo.mark_inprogress(),
-                        }
-                        println!("Status updated.");
-                    } else {
-                        println!("Todo with ID {} not found.", id);
-                    }
-                } else {
-                    println!("Invalid ID.");
-                }
+                change_status(& mut list);
             }
             "change-description" => {
-                println!("Enter the Task ID to update description:");
-                let mut id_input = String::new();
-                io::stdin()
-                    .read_line(&mut id_input)
-                    .expect("Failed to read line");
-                if let Ok(id) = id_input.trim().parse::<i32>() {
-                    if let Some(todo) = list.iter_mut().find(|t| t.id == id) {
-                        let new_description = get_description();
-                        todo.set_description(new_description);
-                        println!("Description updated.");
-                    } else {
-                        println!("Todo with ID {} not found.", id);
-                    }
-                } else {
-                    println!("Invalid ID.");
-                }
+                change_description(& mut list);
             }
             "change-due-date" => {
-                println!("Enter the Task ID to update due date:");
-                let mut id_input = String::new();
-                io::stdin()
-                    .read_line(&mut id_input)
-                    .expect("Failed to read line");
-                if let Ok(id) = id_input.trim().parse::<i32>() {
-                    if let Some(todo) = list.iter_mut().find(|t| t.id == id) {
-                        let new_due_date = get_due_date();
-                        todo.set_due_date(new_due_date);
-                        println!("Due date updated.");
-                    } else {
-                        println!("Todo with ID {} not found.", id);
-                    }
-                } else {
-                    println!("Invalid ID.");
-                }
+                change_duedate(& mut list);
             }
             "delete" => {
-                println!("Enter the Task ID to delete:");
-                let mut id_input = String::new();
-                io::stdin()
-                    .read_line(&mut id_input)
-                    .expect("Failed to read line");
-                if let Ok(id) = id_input.trim().parse::<i32>() {
-                    if let Some(pos) = list.iter().position(|t| t.id == id) {
-                        list.remove(pos);
-                        println!("Todo with ID {} deleted.", id);
-                    } else {
-                        println!("Todo with ID {} not found.", id);
-                    }
-                } else {
-                    println!("Invalid ID.");
-                }
+                delete(&mut list);
             }
             "save" => {
-                let json = serde_json::to_string_pretty(&list).unwrap();
-                let mut file = File::create("files/todo.json").unwrap();
-                file.write_all(json.as_bytes()).expect("Failed to write to file");
+               save(& mut list);
             }
             "exit" => {
-                println!("Exiting...");
+                exit();
                 break;
             }
             "--help" => {
-                println!("Available commands:");
-                println!("add - Add a new task");
-                println!("change-priority - Set the priority of a task");
-                println!("change-status - Set the status of a task");
-                println!("change-description - Set the description of a task");
-                println!("change-due-date - Set the due date of a task");
-                println!("delete - Delete a task");
-                println!("display - Display all task");
-                println!("save - Save tasks to file");
-                println!("exit - Exit the application");
+                help()
             }
             _ => {
                 println!("Invalid command. Please try again.");
